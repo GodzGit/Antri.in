@@ -61,8 +61,22 @@ func Paginated(ctx *fiber.Ctx, data any, nextCursor string, limit int) error {
 }
 
 // Error mengubah error menjadi response gagal standar.
-// Kalau err bukan *AppError, otomatis dianggap error internal (500).
+// Kalau err adalah *fiber.Error (mis. 404 dari Fiber), status-nya dipakai.
+// Kalau err adalah *AppError, code & message-nya dipakai.
+// Kalau bukan keduanya, dianggap error internal (500).
 func Error(ctx *fiber.Ctx, err error) error {
+	// Kasus 1: error bawaan Fiber (route tidak ditemukan, dsb.)
+	if fe, ok := err.(*fiber.Error); ok {
+		return ctx.Status(fe.Code).JSON(errorResponse{
+			Success: false,
+			Error: &AppError{
+				Code:    "HTTP_ERROR",
+				Message: fe.Message,
+			},
+		})
+	}
+
+	// Kasus 2: error dari service (*AppError)
 	appErr := AsAppError(err)
 	if appErr == nil {
 		appErr = Internal("terjadi kesalahan pada server")
