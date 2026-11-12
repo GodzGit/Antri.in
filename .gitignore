@@ -1,0 +1,40 @@
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Binary / build output
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test & coverage
+*.test
+*.out
+coverage.*
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency / vendor
+vendor/
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Uploads / temp
+/tmp/
