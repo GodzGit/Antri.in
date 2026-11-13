@@ -12,7 +12,8 @@ import (
 // lalu mengisinya di main.go.
 type Deps struct {
 	Layanan *service.LayananService
-	// Auth, Loket, Tiket, Notifikasi, ... menyusul.
+	Loket   *service.LoketService
+	// Auth, Tiket, Notifikasi, ... menyusul.
 }
 
 // Setup mendaftarkan semua route aplikasi.
@@ -30,6 +31,9 @@ func Setup(app *fiber.App, deps Deps) {
 	// ===== SLOT PENDAFTARAN ROUTE =====
 	if deps.Layanan != nil {
 		RegisterLayananRoutes(api, deps.Layanan)
+	}
+	if deps.Loket != nil {
+		RegisterLoketRoutes(api, deps.Loket)
 	}
 	// =================================
 
