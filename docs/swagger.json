@@ -1,0 +1,551 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Backend sistem antrean digital ANTRI.IN: ambil nomor antrean, panggil tiket di loket, notifikasi giliran, dan statistik layanan.",
+        "title": "ANTRI.IN API",
+        "contact": {},
+        "version": "0.1.0"
+    },
+    "basePath": "/api",
+    "paths": {
+        "/notifikasi/saya": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Diurutkan dari yang terbaru. Gunakan meta.next_cursor untuk halaman berikutnya.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifikasi"
+                ],
+                "summary": "Notifikasi milik pengguna yang login",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Jumlah per halaman (1-100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor dari meta.next_cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.CursorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Notifikasi"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Cursor tidak valid",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifikasi/{id}/baca": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifikasi"
+                ],
+                "summary": "Menandai notifikasi sudah dibaca",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID notifikasi (ObjectID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.WebResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ID bukan ObjectID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Tidak ada, atau milik pengguna lain",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/statistik/layanan/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Jumlah tiket per jam (WIB), jam tersibuk, jumlah per status, serta rata-rata waktu tunggu dan waktu layanan. Dihitung dengan aggregation $facet di MongoDB.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "statistik"
+                ],
+                "summary": "Statistik harian sebuah layanan",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID layanan",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal YYYY-MM-DD, default hari ini (WIB)",
+                        "name": "tanggal",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.StatistikLayanan"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Layanan tidak ditemukan",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tiket/{id}/estimasi": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Orang di depan x rata-rata durasi layanan / jumlah loket buka. Durasi memakai rata-rata 7 hari terakhir bila ada minimal 5 tiket selesai, selain itu memakai durasi bawaan layanan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tiket"
+                ],
+                "summary": "Estimasi waktu tunggu tiket",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID tiket",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.EstimasiTunggu"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Tidak ada, atau milik pengguna lain",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Tiket sudah selesai, dilewati, atau batal",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tiket/{id}/riwayat": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Dicatat oleh worker dari event outbox, diurutkan dari yang paling awal.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tiket"
+                ],
+                "summary": "Riwayat perubahan status tiket",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID tiket",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.WebResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.RiwayatTiket"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Tidak ada, atau milik pengguna lain",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.CursorMeta": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "665f1c2b9d3e4a0012345678"
+                }
+            }
+        },
+        "model.CursorResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "meta": {
+                    "$ref": "#/definitions/model.CursorMeta"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "model.ErrorDetail": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "NOT_FOUND"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "data tidak ditemukan"
+                }
+            }
+        },
+        "model.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/model.ErrorDetail"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "model.EstimasiTunggu": {
+            "type": "object",
+            "properties": {
+                "estimasi_menit": {
+                    "type": "integer"
+                },
+                "kode": {
+                    "type": "string"
+                },
+                "loket_buka": {
+                    "type": "integer"
+                },
+                "orang_di_depan": {
+                    "type": "integer"
+                },
+                "perkiraan_dipanggil": {
+                    "type": "string"
+                },
+                "posisi": {
+                    "type": "integer"
+                },
+                "rata_durasi_menit": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "sumber_durasi": {
+                    "type": "string"
+                },
+                "tiket_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Notifikasi": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "dibaca": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "judul": {
+                    "type": "string"
+                },
+                "pesan": {
+                    "type": "string"
+                },
+                "tiket_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.RiwayatTiket": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "layanan_id": {
+                    "type": "integer"
+                },
+                "loket_id": {
+                    "type": "integer"
+                },
+                "status_baru": {
+                    "type": "string"
+                },
+                "status_lama": {
+                    "type": "string"
+                },
+                "tiket_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "waktu": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.StatistikJam": {
+            "type": "object",
+            "properties": {
+                "jam": {
+                    "type": "integer"
+                },
+                "jumlah": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.StatistikLayanan": {
+            "type": "object",
+            "properties": {
+                "jam_tersibuk": {
+                    "type": "integer"
+                },
+                "jumlah_per_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "layanan_id": {
+                    "type": "integer"
+                },
+                "maks_tunggu_menit": {
+                    "type": "number"
+                },
+                "per_jam": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.StatistikJam"
+                    }
+                },
+                "rata_layanan_menit": {
+                    "type": "number"
+                },
+                "rata_tunggu_menit": {
+                    "type": "number"
+                },
+                "tanggal": {
+                    "type": "string"
+                },
+                "total_tiket": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.WebResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "berhasil"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Isi dengan \"Bearer \u003caccess_token\u003e\" dari endpoint login.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

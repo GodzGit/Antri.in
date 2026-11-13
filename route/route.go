@@ -6,6 +6,7 @@ import (
 
 	"github.com/GodzGit/Antri.in/app/service"
 	"github.com/GodzGit/Antri.in/helper"
+	"github.com/GodzGit/Antri.in/middleware"
 )
 
 // Deps menampung semua service yang dibutuhkan oleh route aplikasi.
@@ -15,7 +16,11 @@ type Deps struct {
 	Layanan *service.LayananService
 	Loket   *service.LoketService
 	Tiket   *service.TiketService
-	// Auth, Notifikasi, ... menyusul.
+
+	Notifikasi *service.NotifikasiService
+	Estimasi   *service.EstimasiService
+	Riwayat    *service.RiwayatService
+	Statistik  *service.StatistikService
 }
 
 // Setup mendaftarkan semua route aplikasi.
@@ -42,6 +47,15 @@ func Setup(app *fiber.App, deps Deps, jwtSecret string) {
 	if deps.Tiket != nil {
 		RegisterTiketRoutes(api, deps.Tiket)
 	}
+
+	auth := middleware.Auth(jwtSecret)
+	if deps.Notifikasi != nil {
+		RegisterNotifikasiRoutes(api, deps.Notifikasi, auth, middleware.RequirePermission)
+	}
+	if deps.Estimasi != nil && deps.Riwayat != nil && deps.Statistik != nil {
+		RegisterStatistikRoutes(api, deps.Estimasi, deps.Riwayat, deps.Statistik, auth, middleware.RequirePermission)
+	}
+	RegisterSwaggerRoutes(app)
 	// =================================
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
