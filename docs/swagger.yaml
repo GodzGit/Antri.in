@@ -1,0 +1,354 @@
+basePath: /api
+definitions:
+  model.CursorMeta:
+    properties:
+      limit:
+        example: 10
+        type: integer
+      next_cursor:
+        example: 665f1c2b9d3e4a0012345678
+        type: string
+    type: object
+  model.CursorResponse:
+    properties:
+      data: {}
+      meta:
+        $ref: '#/definitions/model.CursorMeta'
+      success:
+        example: true
+        type: boolean
+    type: object
+  model.ErrorDetail:
+    properties:
+      code:
+        example: NOT_FOUND
+        type: string
+      message:
+        example: data tidak ditemukan
+        type: string
+    type: object
+  model.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/model.ErrorDetail'
+      success:
+        example: false
+        type: boolean
+    type: object
+  model.EstimasiTunggu:
+    properties:
+      estimasi_menit:
+        type: integer
+      kode:
+        type: string
+      loket_buka:
+        type: integer
+      orang_di_depan:
+        type: integer
+      perkiraan_dipanggil:
+        type: string
+      posisi:
+        type: integer
+      rata_durasi_menit:
+        type: number
+      status:
+        type: string
+      sumber_durasi:
+        type: string
+      tiket_id:
+        type: integer
+    type: object
+  model.Notifikasi:
+    properties:
+      created_at:
+        type: string
+      dibaca:
+        type: boolean
+      id:
+        type: string
+      judul:
+        type: string
+      pesan:
+        type: string
+      tiket_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  model.RiwayatTiket:
+    properties:
+      id:
+        type: string
+      layanan_id:
+        type: integer
+      loket_id:
+        type: integer
+      status_baru:
+        type: string
+      status_lama:
+        type: string
+      tiket_id:
+        type: integer
+      user_id:
+        type: integer
+      waktu:
+        type: string
+    type: object
+  model.StatistikJam:
+    properties:
+      jam:
+        type: integer
+      jumlah:
+        type: integer
+    type: object
+  model.StatistikLayanan:
+    properties:
+      jam_tersibuk:
+        type: integer
+      jumlah_per_status:
+        additionalProperties:
+          type: integer
+        type: object
+      layanan_id:
+        type: integer
+      maks_tunggu_menit:
+        type: number
+      per_jam:
+        items:
+          $ref: '#/definitions/model.StatistikJam'
+        type: array
+      rata_layanan_menit:
+        type: number
+      rata_tunggu_menit:
+        type: number
+      tanggal:
+        type: string
+      total_tiket:
+        type: integer
+    type: object
+  model.WebResponse:
+    properties:
+      data: {}
+      message:
+        example: berhasil
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: 'Backend sistem antrean digital ANTRI.IN: ambil nomor antrean, panggil
+    tiket di loket, notifikasi giliran, dan statistik layanan.'
+  title: ANTRI.IN API
+  version: 0.1.0
+paths:
+  /notifikasi/{id}/baca:
+    patch:
+      parameters:
+      - description: ID notifikasi (ObjectID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.WebResponse'
+        "400":
+          description: ID bukan ObjectID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Tidak ada, atau milik pengguna lain
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Menandai notifikasi sudah dibaca
+      tags:
+      - notifikasi
+  /notifikasi/saya:
+    get:
+      description: Diurutkan dari yang terbaru. Gunakan meta.next_cursor untuk halaman
+        berikutnya.
+      parameters:
+      - default: 10
+        description: Jumlah per halaman (1-100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor dari meta.next_cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.CursorResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Notifikasi'
+                  type: array
+              type: object
+        "400":
+          description: Cursor tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Notifikasi milik pengguna yang login
+      tags:
+      - notifikasi
+  /statistik/layanan/{id}:
+    get:
+      description: Jumlah tiket per jam (WIB), jam tersibuk, jumlah per status, serta
+        rata-rata waktu tunggu dan waktu layanan. Dihitung dengan aggregation $facet
+        di MongoDB.
+      parameters:
+      - description: ID layanan
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Tanggal YYYY-MM-DD, default hari ini (WIB)
+        in: query
+        name: tanggal
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.StatistikLayanan'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Layanan tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Statistik harian sebuah layanan
+      tags:
+      - statistik
+  /tiket/{id}/estimasi:
+    get:
+      description: Orang di depan x rata-rata durasi layanan / jumlah loket buka.
+        Durasi memakai rata-rata 7 hari terakhir bila ada minimal 5 tiket selesai,
+        selain itu memakai durasi bawaan layanan.
+      parameters:
+      - description: ID tiket
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.EstimasiTunggu'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Tidak ada, atau milik pengguna lain
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Tiket sudah selesai, dilewati, atau batal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Estimasi waktu tunggu tiket
+      tags:
+      - tiket
+  /tiket/{id}/riwayat:
+    get:
+      description: Dicatat oleh worker dari event outbox, diurutkan dari yang paling
+        awal.
+      parameters:
+      - description: ID tiket
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.RiwayatTiket'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Tidak ada, atau milik pengguna lain
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Riwayat perubahan status tiket
+      tags:
+      - tiket
+securityDefinitions:
+  BearerAuth:
+    description: Isi dengan "Bearer <access_token>" dari endpoint login.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
