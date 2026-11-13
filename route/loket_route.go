@@ -3,24 +3,26 @@ package route
 import (
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/GodzGit/Antri.in/app/model"
 	"github.com/GodzGit/Antri.in/app/service"
 )
 
 // RegisterLoketRoutes mendaftarkan endpoint loket.
 //
-// TODO(auth): setelah middleware Auth + RequirePermission dari Fase 2 masuk:
+// Akses (panduan dokumen bagian 4):
 //
-//	loket:manage     -> GET/POST/PUT/DELETE /loket
-//	loket:operate    -> PATCH /loket/:id/buka dan /loket/:id/tutup
-func RegisterLoketRoutes(api fiber.Router, svc *service.LoketService) {
-	loket := api.Group("/loket")
+//	GET/POST/PUT/DELETE -> loket:manage
+//	PATCH /:id/buka     -> loket:operate
+//	PATCH /:id/tutup    -> loket:operate
+func RegisterLoketRoutes(api fiber.Router, svc *service.LoketService, auth fiber.Handler, can func(permission string) fiber.Handler) {
+	loket := api.Group("/loket", auth)
 
-	loket.Get("/", svc.List)
-	loket.Get("/:id", svc.Get)
-	loket.Post("/", svc.Create)
-	loket.Put("/:id", svc.Update)
-	loket.Delete("/:id", svc.Delete)
+	loket.Get("/", can(model.PermissionLoketManage), svc.List)
+	loket.Get("/:id", can(model.PermissionLoketManage), svc.Get)
+	loket.Post("/", can(model.PermissionLoketManage), svc.Create)
+	loket.Put("/:id", can(model.PermissionLoketManage), svc.Update)
+	loket.Delete("/:id", can(model.PermissionLoketManage), svc.Delete)
 
-	loket.Patch("/:id/buka", svc.Buka)
-	loket.Patch("/:id/tutup", svc.Tutup)
+	loket.Patch("/:id/buka", can(model.PermissionLoketOperate), svc.Buka)
+	loket.Patch("/:id/tutup", can(model.PermissionLoketOperate), svc.Tutup)
 }
