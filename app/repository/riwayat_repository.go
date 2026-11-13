@@ -150,8 +150,13 @@ func (r *RiwayatRepository) Statistik(ctx context.Context, layananID int64, dari
 				bson.D{{Key: "$sort", Value: bson.D{{Key: "_id", Value: 1}}}},
 			}},
 			{Key: "per_status", Value: bson.A{
+				bson.D{{Key: "$sort", Value: bson.D{{Key: "tiket_id", Value: 1}, {Key: "waktu", Value: 1}, {Key: "outbox_id", Value: 1}}}},
 				bson.D{{Key: "$group", Value: bson.D{
-					{Key: "_id", Value: "$status_baru"},
+					{Key: "_id", Value: "$tiket_id"},
+					{Key: "status", Value: bson.D{{Key: "$last", Value: "$status_baru"}}},
+				}}},
+				bson.D{{Key: "$group", Value: bson.D{
+					{Key: "_id", Value: "$status"},
 					{Key: "jumlah", Value: bson.D{{Key: "$sum", Value: 1}}},
 				}}},
 			}},
