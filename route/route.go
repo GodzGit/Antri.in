@@ -1,4 +1,3 @@
-
 package route
 
 import (
@@ -33,22 +32,23 @@ func Setup(app *fiber.App, deps Deps, jwtSecret string) {
 
 	api := app.Group("/api")
 
+	auth := middleware.Auth(jwtSecret)
+
 	// ===== SLOT PENDAFTARAN ROUTE =====
 	RegisterAuthRoutes(api, deps.Auth, jwtSecret)
 	RegisterUserRoutes(api, deps.User, jwtSecret)
 
 	if deps.Layanan != nil {
-		RegisterLayananRoutes(api, deps.Layanan)
+		RegisterLayananRoutes(api, deps.Layanan, auth, middleware.RequirePermission)
 	}
 
 	if deps.Loket != nil {
-		RegisterLoketRoutes(api, deps.Loket)
+		RegisterLoketRoutes(api, deps.Loket, auth, middleware.RequirePermission)
 	}
 	if deps.Tiket != nil {
-		RegisterTiketRoutes(api, deps.Tiket)
+		RegisterTiketRoutes(api, deps.Tiket, auth, middleware.RequirePermission)
 	}
 
-	auth := middleware.Auth(jwtSecret)
 	if deps.Notifikasi != nil {
 		RegisterNotifikasiRoutes(api, deps.Notifikasi, auth, middleware.RequirePermission)
 	}
