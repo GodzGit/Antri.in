@@ -6,6 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/GodzGit/Antri.in/app/repository"
+	"github.com/GodzGit/Antri.in/app/service"
 	"github.com/GodzGit/Antri.in/config"
 	"github.com/GodzGit/Antri.in/database"
 	"github.com/GodzGit/Antri.in/middleware"
@@ -51,8 +53,18 @@ func main() {
 
 	app.Use(middleware.Logger())
 
+	// ===== Repository & Service =====
+	layananRepo := repository.NewLayananRepository(pgPool)
+	layananService := service.NewLayananService(layananRepo)
+
+	loketRepo := repository.NewLoketRepository(pgPool)
+	loketService := service.NewLoketService(loketRepo)
+
 	// ===== Daftarkan route =====
-	route.Setup(app)
+	route.Setup(app, route.Deps{
+		Layanan: layananService,
+		Loket:   loketService,
+	})
 
 	// ===== Jalankan server =====
 	addr := ":" + cfg.App.Port
