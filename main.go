@@ -86,13 +86,17 @@ func main() {
 	loketRepo := repository.NewLoketRepository(pgPool)
 	loketService := service.NewLoketService(loketRepo)
 
-	// ===== Route Dependencies =====
-	deps := route.Deps{
-		Auth:    authSvc,
-		User:    userSvc,
+	tiketRepo := repository.NewTiketRepository(pgPool)
+	outboxRepo := repository.NewOutboxRepository(pgPool)
+	txManager := repository.NewTxManager(pgPool)
+	tiketService := service.NewTiketService(tiketRepo, layananRepo, outboxRepo, txManager)
+
+	// ===== Daftarkan route =====
+	route.Setup(app, route.Deps{
 		Layanan: layananService,
 		Loket:   loketService,
-	}
+		Tiket:   tiketService,
+	})
 
 	// ===== Daftarkan Route =====
 	route.Setup(app, deps, cfg.JWT.Secret)

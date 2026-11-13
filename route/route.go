@@ -14,6 +14,8 @@ type Deps struct {
 	User    *service.UserService
 	Layanan *service.LayananService
 	Loket   *service.LoketService
+	Tiket   *service.TiketService
+	// Auth, Notifikasi, ... menyusul.
 }
 
 // Setup mendaftarkan semua route aplikasi.
@@ -36,6 +38,9 @@ func Setup(app *fiber.App, deps Deps, jwtSecret string) {
 
 	if deps.Loket != nil {
 		RegisterLoketRoutes(api, deps.Loket)
+	}
+	if deps.Tiket != nil {
+		RegisterTiketRoutes(api, deps.Tiket)
 	}
 	// =================================
 
