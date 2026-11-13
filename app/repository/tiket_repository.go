@@ -100,7 +100,9 @@ func (r *TiketRepository) GetByID(ctx context.Context, id int64) (*model.Tiket, 
 // lengkap dengan nama layanan, nama loket, dan posisi antrean.
 func (r *TiketRepository) ListByUser(ctx context.Context, userID int64) ([]model.TiketSaya, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT `+tiketColumns+`,
+		SELECT tiket.id, tiket.layanan_id, tiket.user_id, tiket.loket_id, tiket.tanggal,
+			tiket.nomor, tiket.kode, tiket.status,
+			tiket.diambil_at, tiket.dipanggil_at, tiket.selesai_at, tiket.version,
 			ly.nama,
 			COALESCE(lo.nama, '') AS loket,
 			CASE WHEN tiket.status = 'menunggu' THEN (
@@ -225,9 +227,9 @@ func (r *TiketRepository) PanggilBerikutnya(ctx context.Context, db DBTX, layana
 func (r *TiketRepository) UbahStatus(ctx context.Context, db DBTX, id int64, dari, ke string) (bool, error) {
 	tag, err := r.pickDB(db).Exec(ctx, `
 		UPDATE tiket SET
-			status = $3,
-			dipanggil_at = CASE WHEN $3 = 'dipanggil' THEN now() ELSE dipanggil_at END,
-			selesai_at  = CASE WHEN $3 = 'selesai'  THEN now() ELSE selesai_at  END,
+			status = $3::varchar,
+			dipanggil_at = CASE WHEN $3::varchar = 'dipanggil' THEN now() ELSE dipanggil_at END,
+			selesai_at  = CASE WHEN $3::varchar = 'selesai'  THEN now() ELSE selesai_at  END,
 			version = version + 1
 		WHERE id = $1 AND status = $2`, id, dari, ke)
 	if err != nil {
