@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/GodzGit/Antri.in/database"
 	"github.com/GodzGit/Antri.in/middleware"
 	"github.com/GodzGit/Antri.in/route"
+	"github.com/GodzGit/Antri.in/worker"
 )
 
 func main() {
@@ -53,6 +55,7 @@ func main() {
 
 	// ===== MongoDB (non-fatal dulu) =====
 	mongoClient, err := database.ConnectMongo(ctx, cfg.Mongo)
+	mongoSiap := err == nil
 	if err != nil {
 		log.Printf("MongoDB tidak terhubung: %v", err)
 	} else {
@@ -64,6 +67,7 @@ func main() {
 
 	// ===== Redis (non-fatal dulu) =====
 	redisClient, err := database.ConnectRedis(ctx, cfg.Redis)
+	redisSiap := err == nil
 	if err != nil {
 		log.Printf("Redis tidak terhubung: %v", err)
 	} else {
@@ -96,6 +100,38 @@ func main() {
 		Layanan: layananService,
 		Loket:   loketService,
 		Tiket:   tiketService,
+	}
+
+	// ===== Notifikasi, Estimasi, Riwayat, Statistik, dan Worker =====
+	infoAntreanRepo := repository.NewInfoAntreanRepository(pgPool)
+	deps.Estimasi = service.NewEstimasiService(infoAntreanRepo)
+	if mongoSiap {
+		mongoDB := mongoClient.Database(cfg.Mongo.DB)
+		notifikasiRepo := repository.NewNotifikasiRepository(mongoDB)
+		riwayatRepo := repository.NewRiwayatRepository(mongoDB)
+		if err := notifikasiRepo.EnsureIndexes(ctx); err != nil {
+			log.Fatalf("gagal membuat index notifikasi: %v", err)
+		}
+		if err := riwayatRepo.EnsureIndexes(ctx); err != nil {
+			log.Fatalf("gagal membuat index riwayat: %v", err)
+		}
+		deps.Notifikasi = service.NewNotifikasiService(notifikasiRepo)
+		deps.Riwayat = service.NewRiwayatService(infoAntreanRepo, riwayatRepo)
+		deps.Statistik = service.NewStatistikService(infoAntreanRepo, riwayatRepo)
+
+		if redisSiap {
+			stopWorker, err := worker.Start(ctx, worker.Deps{
+				Pool:   pgPool,
+				Mongo:  mongoDB,
+				Redis:  cfg.Redis,
+				Logger: slog.Default(),
+			})
+			if err != nil {
+				log.Fatalf("gagal menjalankan worker: %v", err)
+			}
+			log.Println("Worker outbox berjalan")
+			defer stopWorker()
+		}
 	}
 
 	// ===== Daftarkan Route =====
