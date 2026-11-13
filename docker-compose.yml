@@ -18,7 +18,7 @@ services:
       - MONGO_URI=mongodb://mongo:27017
       - MONGO_DB=antriin
       - REDIS_ADDR=redis:6379
-      - JWT_SECRET=rahasia-super-aman-123
+      - JWT_SECRET=rahasia-super-aman-untuk-development-antriin-2024
       - JWT_ACCESS_TTL=15m
       - JWT_REFRESH_TTL=168h
     depends_on:
