@@ -49,6 +49,8 @@ func main() {
 		ErrorHandler: middleware.ErrorHandler(),
 	})
 
+	app.Use(middleware.Logger())
+
 	// ===== Daftarkan route =====
 	route.Setup(app)
 
