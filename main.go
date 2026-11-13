@@ -60,10 +60,16 @@ func main() {
 	loketRepo := repository.NewLoketRepository(pgPool)
 	loketService := service.NewLoketService(loketRepo)
 
+	tiketRepo := repository.NewTiketRepository(pgPool)
+	outboxRepo := repository.NewOutboxRepository(pgPool)
+	txManager := repository.NewTxManager(pgPool)
+	tiketService := service.NewTiketService(tiketRepo, layananRepo, outboxRepo, txManager)
+
 	// ===== Daftarkan route =====
 	route.Setup(app, route.Deps{
 		Layanan: layananService,
 		Loket:   loketService,
+		Tiket:   tiketService,
 	})
 
 	// ===== Jalankan server =====
