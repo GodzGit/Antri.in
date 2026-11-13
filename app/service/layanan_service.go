@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -9,17 +10,26 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/GodzGit/Antri.in/app/model"
-	"github.com/GodzGit/Antri.in/app/repository"
 	"github.com/GodzGit/Antri.in/helper"
 )
+
+// LayananStore adalah bagian repository layanan yang dipakai service.
+// Dibuat sebagai interface supaya service bisa diuji dengan mock.
+type LayananStore interface {
+	List(ctx context.Context, hanyaAktif bool) ([]model.Layanan, error)
+	GetByID(ctx context.Context, id int64) (*model.Layanan, error)
+	Create(ctx context.Context, m *model.Layanan) error
+	Update(ctx context.Context, m *model.Layanan) error
+	SoftDelete(ctx context.Context, id int64) error
+}
 
 // LayananService berisi logika bisnis sekaligus handler Fiber untuk layanan.
 // Proyek ini tidak memakai layer controller/handler terpisah.
 type LayananService struct {
-	repo *repository.LayananRepository
+	repo LayananStore
 }
 
-func NewLayananService(repo *repository.LayananRepository) *LayananService {
+func NewLayananService(repo LayananStore) *LayananService {
 	return &LayananService{repo: repo}
 }
 
