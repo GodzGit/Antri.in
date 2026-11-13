@@ -231,7 +231,10 @@ func (s *TiketService) Panggil(c *fiber.Ctx) error {
 
 	loket, err := s.tiketRepo.GetLoketInfo(ctx, loketID)
 	if err != nil {
-		return mapTiketError(err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return helper.NotFound("loket tidak ditemukan")
+		}
+		return err
 	}
 	if loket.Status != "buka" {
 		return helper.Conflict("loket sedang tutup")
@@ -244,6 +247,9 @@ func (s *TiketService) Panggil(c *fiber.Ctx) error {
 
 	err = s.txManager.WithTx(ctx, func(tx pgx.Tx) error {
 		t, err := s.tiketRepo.PanggilBerikutnya(ctx, tx, loket.LayananID, loketID, tanggal)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return helper.NotFound("tidak ada antrean yang menunggu")
+		}
 		if err != nil {
 			return err
 		}
