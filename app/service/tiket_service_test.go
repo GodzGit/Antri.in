@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -140,7 +141,12 @@ type apiResp struct {
 
 func newTiketApp(svc *service.TiketService) *fiber.App {
 	app := fiber.New(fiber.Config{ErrorHandler: middleware.ErrorHandler()})
-	api := app.Group("/api")
+	api := app.Group("/api", func(c *fiber.Ctx) error {
+		if id, err := strconv.ParseInt(c.Get("X-User-ID"), 10, 64); err == nil && id > 0 {
+			c.Locals("user_id", id)
+		}
+		return c.Next()
+	})
 
 	api.Post("/layanan/:id/tiket", svc.AmbilNomor)
 	api.Delete("/tiket/:id", svc.Batal)
