@@ -1,3 +1,4 @@
+
 package route
 
 import (
@@ -7,19 +8,16 @@ import (
 	"github.com/GodzGit/Antri.in/helper"
 )
 
-// Deps menampung semua service yang dibutuhkan router.
-// Setiap anggota cukup menambah SATU field di sini (lewat PR masing-masing),
-// lalu mengisinya di main.go.
+// Deps menampung semua service yang dibutuhkan oleh route aplikasi.
 type Deps struct {
+	Auth    *service.AuthService
+	User    *service.UserService
 	Layanan *service.LayananService
 	Loket   *service.LoketService
-	// Auth, Tiket, Notifikasi, ... menyusul.
 }
 
 // Setup mendaftarkan semua route aplikasi.
-// Setiap anggota menambahkan SATU baris pemanggilan RegisterXxxRoutes di sini
-// pada bagian "SLOT PENDAFTARAN ROUTE" di bawah.
-func Setup(app *fiber.App, deps Deps) {
+func Setup(app *fiber.App, deps Deps, jwtSecret string) {
 	app.Get("/health", func(ctx *fiber.Ctx) error {
 		return helper.Success(ctx, "server sehat", fiber.Map{
 			"status": "ok",
@@ -29,9 +27,13 @@ func Setup(app *fiber.App, deps Deps) {
 	api := app.Group("/api")
 
 	// ===== SLOT PENDAFTARAN ROUTE =====
+	RegisterAuthRoutes(api, deps.Auth, jwtSecret)
+	RegisterUserRoutes(api, deps.User, jwtSecret)
+
 	if deps.Layanan != nil {
 		RegisterLayananRoutes(api, deps.Layanan)
 	}
+
 	if deps.Loket != nil {
 		RegisterLoketRoutes(api, deps.Loket)
 	}
@@ -39,9 +41,6 @@ func Setup(app *fiber.App, deps Deps) {
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return helper.Success(ctx, "ANTRI.IN API", fiber.Map{
-			"nama":   "ANTRI.IN",
-			"versi":  "0.1.0",
-			"docs":   "/swagger",
 			"health": "/health",
 		})
 	})
