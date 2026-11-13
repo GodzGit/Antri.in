@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: antriin-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_ENV=development
+      - APP_PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=antriin
+      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_DB=antriin
+      - REDIS_ADDR=redis:6379
+      - JWT_SECRET=rahasia-super-aman-123
+      - JWT_ACCESS_TTL=15m
+      - JWT_REFRESH_TTL=168h
+    depends_on:
+      - postgres
+      - mongo
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: antriin-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=antriin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mongo:
+    image: mongo:7
+    container_name: antriin-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: antriin-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
+  mongodata:
