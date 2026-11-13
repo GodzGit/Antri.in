@@ -118,7 +118,13 @@ func (s *LayananService) Update(c *fiber.Ctx) error {
 		return mapLayananError(err)
 	}
 
-	return helper.Success(c, "layanan berhasil diperbarui", layanan)
+	// Ambil ulang supaya response berisi data lengkap (termasuk created_at).
+	lengkap, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return mapLayananError(err)
+	}
+
+	return helper.Success(c, "layanan berhasil diperbarui", lengkap)
 }
 
 // Delete menangani DELETE /api/layanan/:id (soft delete).
