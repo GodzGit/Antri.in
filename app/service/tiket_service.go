@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -14,20 +15,52 @@ import (
 	"github.com/GodzGit/Antri.in/helper"
 )
 
+// TiketStore adalah bagian repository tiket yang dipakai service.
+// Dibuat sebagai interface supaya service bisa diuji dengan mock.
+type TiketStore interface {
+	CekTiketAktif(ctx context.Context, db repository.DBTX, userID, layananID int64, tanggal time.Time) (bool, error)
+	AmbilNomor(ctx context.Context, db repository.DBTX, layananID int64, tanggal time.Time) (int, error)
+	Insert(ctx context.Context, db repository.DBTX, t *model.Tiket) error
+	GetByID(ctx context.Context, id int64) (*model.Tiket, error)
+	ListByUser(ctx context.Context, userID int64) ([]model.TiketSaya, error)
+	Posisi(ctx context.Context, layananID int64, tanggal time.Time, nomor int) (int, error)
+	Papan(ctx context.Context, layananID int64, tanggal time.Time) (*model.PapanAntrean, error)
+	PanggilBerikutnya(ctx context.Context, db repository.DBTX, layananID, loketID int64, tanggal time.Time) (*model.Tiket, error)
+	UbahStatus(ctx context.Context, db repository.DBTX, id int64, dari, ke string) (bool, error)
+	PanggilUlang(ctx context.Context, db repository.DBTX, id int64, loketID *int64) (bool, error)
+	Batal(ctx context.Context, id, userID int64) (bool, error)
+	GetLoketInfo(ctx context.Context, loketID int64) (*model.LoketInfo, error)
+}
+
+// LayananReader adalah bagian repository layanan yang dibutuhkan tiket service.
+type LayananReader interface {
+	GetByID(ctx context.Context, id int64) (*model.Layanan, error)
+}
+
+// OutboxWriter mencatat event ke tabel outbox.
+type OutboxWriter interface {
+	Insert(ctx context.Context, db repository.DBTX, eventType string, payload any) error
+}
+
+// TxRunner menjalankan fungsi di dalam satu transaksi database.
+type TxRunner interface {
+	WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error
+}
+
 // TiketService berisi logika bisnis sekaligus handler Fiber untuk tiket.
 // Setiap perubahan status tiket WAJIB menulis event outbox di transaksi yang sama.
 type TiketService struct {
-	tiketRepo   *repository.TiketRepository
-	layananRepo *repository.LayananRepository
-	outboxRepo  *repository.OutboxRepository
-	txManager   *repository.TxManager
+	tiketRepo   TiketStore
+	layananRepo LayananReader
+	outboxRepo  OutboxWriter
+	txManager   TxRunner
 }
 
 func NewTiketService(
-	tiketRepo *repository.TiketRepository,
-	layananRepo *repository.LayananRepository,
-	outboxRepo *repository.OutboxRepository,
-	txManager *repository.TxManager,
+	tiketRepo TiketStore,
+	layananRepo LayananReader,
+	outboxRepo OutboxWriter,
+	txManager TxRunner,
 ) *TiketService {
 	return &TiketService{
 		tiketRepo:   tiketRepo,
