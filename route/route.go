@@ -3,18 +3,22 @@ package route
 import (
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/GodzGit/Antri.in/app/service"
 	"github.com/GodzGit/Antri.in/helper"
 )
+
+// Deps menampung semua service yang dibutuhkan router.
+// Setiap anggota cukup menambah SATU field di sini (lewat PR masing-masing),
+// lalu mengisinya di main.go.
+type Deps struct {
+	Layanan *service.LayananService
+	// Auth, Loket, Tiket, Notifikasi, ... menyusul.
+}
 
 // Setup mendaftarkan semua route aplikasi.
 // Setiap anggota menambahkan SATU baris pemanggilan RegisterXxxRoutes di sini
 // pada bagian "SLOT PENDAFTARAN ROUTE" di bawah.
-//
-// Contoh (nanti, setelah service-nya ada):
-//   route.RegisterAuthRoutes(api, authService)
-//   route.RegisterLayananRoutes(api, layananService, authMiddleware)
-//   route.RegisterNotifikasiRoutes(api, notifikasiService, authMiddleware)
-func Setup(app *fiber.App) {
+func Setup(app *fiber.App, deps Deps) {
 	app.Get("/health", func(ctx *fiber.Ctx) error {
 		return helper.Success(ctx, "server sehat", fiber.Map{
 			"status": "ok",
@@ -22,10 +26,11 @@ func Setup(app *fiber.App) {
 	})
 
 	api := app.Group("/api")
-	_ = api // sengaja belum dipakai; anggota akan menambah RegisterXxxRoutes di bawah.
 
 	// ===== SLOT PENDAFTARAN ROUTE =====
-	// ...
+	if deps.Layanan != nil {
+		RegisterLayananRoutes(api, deps.Layanan)
+	}
 	// =================================
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
